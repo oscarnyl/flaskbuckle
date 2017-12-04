@@ -22,6 +22,8 @@ def hello_world(parameter: int):
 ```
 
 
+### API
+
 ##### `swagger.enable_swagger(application: Flask, title="", version="", route="/api/docs")`
 Enables swagger for this flask application. By default, the swaggerfile will be
 exposed at http://flask-app-url/api/docs/swagger.json and Swagger UI will be
@@ -56,7 +58,7 @@ explained in its section. Return models double as both schemas and examples for
 the endpoint.
 
 Parameters:
-- `model: SwaggerModel` - A class extending from `swagger.SwaggerModel`. Note
+- `model: SwaggerModel` - A class extending from `SwaggerModel`. Note
   that you should not pass an instance of a class; you should reference the
   class directly.
 - `status_code: int` - The status code that will return the declared model. ex:
@@ -71,9 +73,14 @@ from flask_swagger import SwaggerModel
 
 class ExampleModel(SwaggerModel):
     hello: str = "world"
+
+
+class NestedExampleModel(SwaggerModel):
+    foo: int = 1
+    bar: SwaggerModel = ExampleModel
 ```
 
-Would generate the following schema:
+Would generate the following schemas:
 ```json
 {
     "type": "object",
@@ -82,15 +89,58 @@ Would generate the following schema:
             "type": "string"
         }
     }
+},
+{
+    "type": "object",
+    "properties": {
+        "foo": {
+            "type": "integer",
+            "format": "int64"
+        },
+        "bar": {
+            "type": "object",
+            "properties": {
+                "hello": {
+                    "type": "string"
+                }
+            }
+        }
+    }
 }
 ```
 
-And the following example:
+And the following examples:
 ```json
 {
     "hello": "world"
+},
+{
+    "foo": 1,
+    "bar": {
+        "hello": "world"
+    }
 }
 ```
-`SwaggerModel`s may define properties that in turn are SwaggerModels - these
-will be treated as objects.
+
+
+##### class SwaggerException
+If at any time you've done something wrong (or gods forbid the implementation of
+this library is incorrect), flask-swagger wont hesitate to raise a
+`SwaggerException`, hopefully with some information about why this occured.
+
+### Notable swagger extensions
+flask-swagger will generate a `"x-nullable"`-key and set it to `true` for
+anything declared with the type `Optional[T]`. As this is non-standard it will
+not have any effect on SwaggerUI, but you may find that other tooling can
+utilize this field (perhaps most notable for python developers is `flex`).
+
+### TODO
+Things that need to be done in this library, in order of priority.
+
+- Implement post body models
+- Add referenced models to `definitions` and reference them via `$ref` instead
+  of the naive approach currently used
+- Add testing
+- Refactor code to not be just a mess in one file
+- Implement missing swagger features (I'm sure there are at least a few)
 
