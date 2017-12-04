@@ -220,7 +220,7 @@ def _generate_swagger_type(t) -> dict:
             }
         }
     if t in SWAGGER_TYPE_MAP:
-        return SWAGGER_TYPE_MAP[t]
+        return SWAGGER_TYPE_MAP[t].copy()
     if isinstance(t, GenericMeta):
         if t._gorg is List:
             inner_type = _generate_swagger_type(t.__args__[0])
@@ -233,8 +233,8 @@ def _generate_swagger_type(t) -> dict:
         if t._gorg is Dict:
             return {"type": "object"}
     if isinstance(t, _Union) \
-        and len(t.__args__) == 2 \
-        and t.__args__[1] is type(None):  # noqa: E721
+    and len(t.__args__) == 2 \
+    and t.__args__[1] is type(None):  # noqa: E721
         inner_type = _generate_swagger_type(t.__args__[0])
         inner_type.update({"x-nullable": True})
         return inner_type
