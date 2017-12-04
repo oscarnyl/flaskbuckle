@@ -28,6 +28,10 @@ SWAGGER_UI_STANDALONE_PRESET_JS_MAP = SWAGGER_UI_STANDALONE_PRESET_JS + ".map"
 SWAGGER_UI_PATH = "/swagger-ui"
 
 
+class SwaggerException(Exception):
+    pass
+
+
 def enable_swagger(
     application: Flask,
     title="",
@@ -195,7 +199,7 @@ def _generate_model_example(model_instance: SwaggerModel) -> dict:
     for key, value in generated_example.items():
         if isinstance(value, type):
             if not issubclass(value, SwaggerModel):
-                raise Exception(f"Invalid swagger model definition: {key}")
+                raise SwaggerException(f"Invalid swagger model definition: {key}")
             replacements[key] = _generate_model_example(value())
     if replacements:
         generated_example.update(replacements)
@@ -238,7 +242,7 @@ def _generate_swagger_type(t) -> dict:
         inner_type = _generate_swagger_type(t.__args__[0])
         inner_type.update({"x-nullable": True})
         return inner_type
-    return {}
+    raise SwaggerException(f"Cannot understand type: {t}")
 
 
 class ParameterLocation(Enum):
