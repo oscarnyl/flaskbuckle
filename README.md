@@ -1,4 +1,4 @@
-flask-swagger
+flaskbuckle
 -------------
 
 Generate swagger documentation from your API implemented in Flask, and expose a
@@ -6,7 +6,18 @@ Swagger UI for this API. Tries to do as much as possible automatically, and when
 automatically is not possible it tries to be as non-intrusive as possible.
 Becomes much better if you bother to use type annotations in your application!
 
+### Quickstart
 
+1. `pip install flaskbuckle`
+2. Add to application configuration:
+```python
+from flaskbuckle import swagger
+...
+swagger.enable_swagger(app)
+```
+3. Access swagger ui at `http://flask-app-url/api/docs`
+4. If necessary, access swaggerfile at
+   `http://flask-app-url/api/docs/swagger.json`
 To use this library, simply add `swagger.enable_swagger(app)` to your where you
 configure your application object. This call will do nothing more but add some
 routes to your application.
@@ -26,8 +37,8 @@ def hello_world(parameter: int):
 
 ##### `swagger.enable_swagger(application: Flask, title="", version="", route="/api/docs")`
 Enables swagger for this flask application. By default, the swaggerfile will be
-exposed at http://flask-app-url/api/docs/swagger.json and Swagger UI will be
-exposed at http://flask-app-url/api/docs .
+exposed at `http://flask-app-url/api/docs/swagger.json` and Swagger UI will be
+exposed at `http://flask-app-url/api/docs` .
 
 Parameters:
 - `application: Flask` - an instance of your flask application
@@ -123,13 +134,19 @@ And the following examples:
 ```
 
 
-##### class SwaggerException
+##### `class SwaggerException`
 If at any time you've done something wrong (or gods forbid the implementation of
-this library is incorrect), flask-swagger wont hesitate to raise a
+this library is incorrect), flaskbuckle wont hesitate to raise a
 `SwaggerException`, hopefully with some information about why this occured.
 
+##### `swagger.get_swagger(application: Flask, title="", version="")`
+If you need to get the swaggerfile as a dict programmatically for some reason,
+flaskbuckle provides a function for this. Note that it *must* be called after
+you've added your views to the application: calling it before wont do anything
+good at all.
+
 ### Notable swagger extensions
-flask-swagger will generate a `"x-nullable"`-key and set it to `true` for
+flaskbuckle will generate a `"x-nullable"`-key and set it to `true` for
 anything declared with the type `Optional[T]`. As this is non-standard it will
 not have any effect on SwaggerUI, but you may find that other tooling can
 utilize this field (perhaps most notable for python developers is `flex`).
@@ -143,4 +160,9 @@ Things that need to be done in this library, in order of priority.
 - Add testing
 - Refactor code to not be just a mess in one file
 - Implement missing swagger features (I'm sure there are at least a few)
+
+
+### Thanks to
+Swashbuckle, which inspired this library (and its name, once I figured out my
+working title was already used)
 
