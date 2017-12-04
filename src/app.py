@@ -59,5 +59,10 @@ def some_route() -> MultiDimensionalListReturn:
     return jsonify([[[100]]]), 200
 
 
+@app.route("/manual_swagger_endpoint")
+def manual_swagger_endpoint():
+    return str(swagger.get_swagger(app, "foo", "0.0.1"))
+
+
 swagger.enable_swagger(app, title="Swagger test API", version="0.0.2")
 

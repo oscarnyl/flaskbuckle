@@ -100,6 +100,15 @@ def enable_swagger(
         )
 
 
+def get_swagger(
+    application: Flask,
+    title: str,
+    version: str,
+    route: str="/api/docs"
+) -> dict:
+    return _generate_swagger(application, title, version, route)
+
+
 def header(name: str, header_type=str) -> Callable:
     def header_decorator(f: Callable) -> Callable:
         header_metadata = {}
@@ -199,7 +208,9 @@ def _generate_model_example(model_instance: SwaggerModel) -> dict:
     for key, value in generated_example.items():
         if isinstance(value, type):
             if not issubclass(value, SwaggerModel):
-                raise SwaggerException(f"Invalid swagger model definition: {key}")
+                raise SwaggerException(
+                    f"Invalid swagger model definition: {key}"
+                )
             replacements[key] = _generate_model_example(value())
     if replacements:
         generated_example.update(replacements)
@@ -377,7 +388,7 @@ def _generate_swagger(
 
     keylist = list(paths.keys())
     for k in keylist:
-        if k.startswith(route) or k.startswith("/static"):
+        if (route and k.startswith(route)) or k.startswith("/static"):
             paths.pop(k)
     return {
         "swagger": "2.0",

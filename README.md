@@ -139,11 +139,21 @@ If at any time you've done something wrong (or gods forbid the implementation of
 this library is incorrect), flaskbuckle wont hesitate to raise a
 `SwaggerException`, hopefully with some information about why this occured.
 
-##### `swagger.get_swagger(application: Flask, title="", version="")`
+##### `swagger.generate_swagger(application: Flask, title="", version="",
+path="/api/docs") ->
+dict`
 If you need to get the swaggerfile as a dict programmatically for some reason,
 flaskbuckle provides a function for this. Note that it *must* be called after
 you've added your views to the application: calling it before wont do anything
 good at all.
+
+Parameters:
+- `application: Flask` - an instance of your flask application
+- `title: str` - The title of your flask application
+- `version: str` - The version string for your application, ex: `"1.0.0"`
+- `route: str` - If you've previously enabled swagger on a custom path you need
+  to specify it here, else flaskbuckles own paths will be listed in the returned
+  swagger spec.
 
 ### Notable swagger extensions
 flaskbuckle will generate a `"x-nullable"`-key and set it to `true` for
