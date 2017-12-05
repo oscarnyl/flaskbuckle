@@ -217,6 +217,12 @@ def _generate_model_example(model_instance: SwaggerModel) -> dict:
     return generated_example
 
 
+def _gorg(t):
+    if hasattr(t, "_gorg"):
+        return t._gorg
+    return t.__origin__
+
+
 SWAGGER_TYPE_MAP = {
     str: {"type": "string"},
     int: {"type": "integer", "format": "int64"},
@@ -237,15 +243,15 @@ def _generate_swagger_type(t) -> dict:
     if t in SWAGGER_TYPE_MAP:
         return SWAGGER_TYPE_MAP[t].copy()
     if isinstance(t, GenericMeta):
-        if t._gorg is List:
+        if _gorg(t) is List:
             inner_type = _generate_swagger_type(t.__args__[0])
             return {
                 "type": "array",
                 "items": inner_type
             }
-        if t._gorg is Tuple:
+        if _gorg(t) is Tuple:
             return _generate_swagger_type(t.__args__[0])
-        if t._gorg is Dict:
+        if _gorg(t) is Dict:
             return {"type": "object"}
     if isinstance(t, _Union) \
     and len(t.__args__) == 2 \
