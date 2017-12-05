@@ -47,7 +47,7 @@ def enable_swagger(
 
     @application.route(route, strict_slashes=False)
     def swagger_ui():
-        with open("src/swagger-ui/index.html", "r") as f:
+        with open(current_path + "/swagger-ui/index.html", "r") as f:
             template_string = "".join(f.readlines())
             return render_template_string(
                 template_string,
