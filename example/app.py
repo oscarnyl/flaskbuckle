@@ -1,8 +1,11 @@
+import sys
+from os import path
 from typing import Tuple, List, Dict, Optional, TypeVar, Union
 
 from flask import Flask, jsonify, Response
 
-import swagger
+sys.path.append(path.abspath(path.join(path.dirname(__file__), "..")))
+from flaskbuckle import swagger
 
 app = Flask(__name__)
 
