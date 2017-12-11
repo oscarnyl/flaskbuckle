@@ -8,7 +8,7 @@ Becomes much better if you bother to use type annotations in your application!
 
 ### Quickstart
 
-1. `pip install flaskbuckle`
+1. ~~`pip install flaskbuckle`~~~ (coming soon)
 2. Add to application configuration:
 ```python
 from flaskbuckle import swagger
