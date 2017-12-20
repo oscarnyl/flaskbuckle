@@ -10,6 +10,7 @@ from typing import (
     Dict,
     _Union
 )
+from uuid import UUID
 from enum import Enum
 
 from flask import Flask, render_template_string, send_file, make_response
@@ -230,7 +231,8 @@ SWAGGER_TYPE_MAP = {
     str: {"type": "string"},
     int: {"type": "integer", "format": "int64"},
     bool: {"type": "boolean"},
-    float: {"type": "number"}
+    float: {"type": "number"},
+    UUID: {"type": "string", "format": "uuid"}
 }
 
 
