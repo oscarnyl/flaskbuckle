@@ -162,6 +162,9 @@ utilize this field (perhaps most notable for python developers is `flex`).
 ### TODO
 Things that need to be done in this library, in order of priority.
 
+- Replace the SwaggerModel-structure for representing Schemas/Examples - it is not
+  flexible enough to provide the functionality we need. Replace with a dict-based
+  approach (`key: Any => Tuple[Type, ExampleValue]`)
 - Implement post body models
 - Add referenced models to `definitions` and reference them via `$ref` instead
   of the naive approach currently used
