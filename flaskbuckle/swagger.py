@@ -12,7 +12,7 @@ from typing import (
 )
 from enum import Enum
 
-from flask import Flask, render_template_string, send_file
+from flask import Flask, render_template_string, send_file, make_response
 
 
 PATH_REGEX = re.compile(r"{.*:")
@@ -49,11 +49,14 @@ def enable_swagger(
     def swagger_ui():
         with open(current_path + "/swagger-ui/index.html", "r") as f:
             template_string = "".join(f.readlines())
-            return render_template_string(
+            rendered_template_string = render_template_string(
                 template_string,
                 swagger_url=route + SWAGGER_FILE_LOCATION,
                 base_url=route
             )
+            response = make_response(rendered_template_string)
+            response.mimetype = "text/html"
+            return response, 200
 
     @application.route(route + SWAGGER_UI_JS_BUNDLE)
     def swagger_ui_js_bundle():
