@@ -5,7 +5,8 @@ services:
         ports:
             - "0.0.0.0:5000:5000"
         volumes:
-            - ./src:/app/src
+            - ./example:/app/example
+            - ./flaskbuckle:/app/flaskbuckle
         environment:
             - FLASK_APP=/app/example/app.py
             - FLASK_DEBUG=1

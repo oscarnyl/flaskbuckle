@@ -8,7 +8,8 @@ from typing import (
     GenericMeta,
     List,
     Dict,
-    _Union
+    _Union,
+    Any
 )
 from uuid import UUID
 from enum import Enum
@@ -139,60 +140,58 @@ def query_param(name: str, param_type=str) -> Callable:
     return query_param_decorator
 
 
-class SwaggerModel:
-    def _example(self):
-        properties = [item for item in dir(self) if not item.startswith("_")]
-        return {key: getattr(self.__class__, key) for key in properties}
-
-    def _schema(self):
-        return {
-            k: v for k, v in self.__annotations__.items()
-            if not k.startswith("_")
-        }
+SwaggerModel = Dict[Any, Tuple[type, Any]]
 
 
-def return_model(model: SwaggerModel, status_code: int) -> Callable:
+def return_model(model: SwaggerModel, status_code: int, mimetype: str) -> Callable:
     def return_model_decorator(f: Callable) -> Callable:
         return_model_metadata = {}
         if hasattr(f, "__SWAGGER_RETURN_MODELS"):
             if status_code in f.__SWAGGER_RETURN_MODELS:
                 return f
             return_model_metadata.update(f.__SWAGGER_RETURN_MODELS)
-        return_model_metadata[status_code] = model
+        return_model_metadata[status_code] = (model, mimetype)
         f.__SWAGGER_RETURN_MODELS = return_model_metadata
         return f
     return return_model_decorator
 
 
+def post_model(model: SwaggerModel) -> Callable:
+    def post_model_decorator(f: Callable) -> Callable:
+        if hasattr(f, "__SWAGGER_POST_MODEL"):
+            raise SwaggerException("Multiple post models is not supported")
+        f.__SWAGGER_POST_MODEL = model
+        return f
+    return post_model_decorator
+
+
 def _generate_model_description(
-    model: SwaggerModel,
+    model_description: Tuple[SwaggerModel, str],
     status_code: int,
     f: Callable
 ) -> str:
-    description = inspect.getdoc(model)
-    if not description:
-        description = f"{f.__name__}: {status_code}"
-    model_inst = model()
+    model, mimetype = model_description
+    description = f"{f.__name__}: {status_code}"
     return {
         "description": description,
         "examples": {
-            model._MIMETYPE: _generate_model_example(model_inst)
+            mimetype: _generate_model_example(model)
         },
         "schema": _generate_swagger_schema(
-            _generate_model_schema(model_inst)
+            _generate_model_schema(model)
         )
     }
 
 
-def _generate_model_schema(model_instance: SwaggerModel) -> dict:
-    generated_schema = model_instance._schema()
-    replacements = {}
-    for key, value in generated_schema.items():
-        if issubclass(value, SwaggerModel):
-            replacements[key] = _generate_model_schema(
-                getattr(model_instance, key)()
+def _generate_model_schema(model: SwaggerModel) -> dict:
+    generated_schema = {}
+    for key, value in model.items():
+        if value[0] == dict:
+            generated_schema[key] = _generate_model_schema(
+                value[1]
             )
-    generated_schema.update(replacements)
+        else:
+            generated_schema[key] = value[0]
     return generated_schema
 
 
@@ -206,18 +205,15 @@ def _generate_swagger_schema(model_mapping: dict) -> dict:
     }
 
 
-def _generate_model_example(model_instance: SwaggerModel) -> dict:
-    generated_example = model_instance._example()
-    replacements = {}
-    for key, value in generated_example.items():
-        if isinstance(value, type):
-            if not issubclass(value, SwaggerModel):
-                raise SwaggerException(
-                    f"Invalid swagger model definition: {key}"
-                )
-            replacements[key] = _generate_model_example(value())
-    if replacements:
-        generated_example.update(replacements)
+def _generate_model_example(model: SwaggerModel) -> dict:
+    generated_example = {}
+    for key, value in model.items():
+        if value[0] == dict:
+            generated_example[key] = _generate_model_example(
+                value[1]
+            )
+        else:
+            generated_example[key] = value[1]
     return generated_example
 
 
@@ -271,6 +267,7 @@ class ParameterLocation(Enum):
     PATH = "path"
     HEADER = "header"
     QUERY = "query"
+    BODY = "body"
 
 
 def _generate_parameter_description(
@@ -326,6 +323,26 @@ def _generate_query_parameter_description(query_name, query_type) -> dict:
     return description
 
 
+def _generate_post_model_description(post_model_description: SwaggerModel, name: str) -> dict:
+    model_description = {
+        "schema": _generate_swagger_schema(
+            _generate_model_schema(
+                post_model_description
+            )
+        ),
+        "example": _generate_model_example(
+            post_model_description
+        )
+    }
+    description = _generate_parameter_description(
+        f"{name} post body",
+        ParameterLocation.BODY,
+        True
+    )
+    description.update(model_description)
+    return description
+
+
 def _generate_method(application: Flask, rule, method) -> dict:
     if method in ["HEAD", "OPTIONS"]:
         return None
@@ -358,6 +375,13 @@ def _generate_method(application: Flask, rule, method) -> dict:
             entry["parameters"].append(
                 _generate_query_parameter_description(query_param, t)
             )
+    if hasattr(rule_function, "__SWAGGER_POST_MODEL"):
+        entry["parameters"].append(
+            _generate_post_model_description(
+                rule_function.__SWAGGER_POST_MODEL,
+                rule_function.__name__
+            )
+        )
     entry["responses"] = {}
     if hasattr(rule_function, "__SWAGGER_RETURN_MODELS"):
         for code, model in rule_function.__SWAGGER_RETURN_MODELS.items():

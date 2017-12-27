@@ -2,10 +2,10 @@ import sys
 from os import path
 from typing import Tuple, List, Dict, Optional, TypeVar, Union
 
-from flask import Flask, jsonify, Response
+from flask import Flask, jsonify, Response, request
 
 sys.path.append(path.abspath(path.join(path.dirname(__file__), "..")))
-from flaskbuckle import swagger
+from flaskbuckle import swagger  # noqa: E402
 
 app = Flask(__name__)
 
@@ -19,28 +19,24 @@ T = TypeVar("T")
 
 FlaskReturn = Union[T, Tuple[T, int], Tuple[T, int, dict], Response]
 
+EXAMPLE_MODEL = {
+    "hello": (str, "world")
+}
 
-class ExampleModel(swagger.SwaggerModel):
-    """An example model"""
-    _MIMETYPE = "application/json"
-    hello: str = "world"
-
-
-class ExampleRecursiveModel(swagger.SwaggerModel):
-    """A recursive example model"""
-    _MIMETYPE = "application/json"
-    dict_field: ExampleModel = ExampleModel
+EXAMPLE_RECURSIVE_MODEL = {
+    "dict_field": (dict, EXAMPLE_MODEL)
+}
 
 
 @app.route("/")
-@swagger.return_model(ExampleModel, 200)
+@swagger.return_model(EXAMPLE_MODEL, 200, "application/json")
 def hello() -> FlaskReturn[dict]:
     """A simple Hello World endpoint"""
     return jsonify({"hello": "world"}), 200
 
 
 @app.route("/routes/<int:one>/<two>")
-@swagger.return_model(ExampleRecursiveModel, 200)
+@swagger.return_model(EXAMPLE_RECURSIVE_MODEL, 200, "application/json")
 @swagger.header("X-CustomHeader")
 def route_with_two_parameters(one: int, two: bool) -> FlaskReturn[dict]:
     """Route that has two parameters in path and one in header"""
@@ -62,10 +58,17 @@ def some_route() -> MultiDimensionalListReturn:
     return jsonify([[[100]]]), 200
 
 
+@app.route("/post_something", methods=["POST"])
+@swagger.post_model(EXAMPLE_MODEL)
+@swagger.return_model(EXAMPLE_MODEL, 200, "application/json")
+def post_something():
+    """echo, but in post format!"""
+    return request.data, 200
+
+
 @app.route("/manual_swagger_endpoint")
 def manual_swagger_endpoint():
     return str(swagger.get_swagger(app, "foo", "0.0.1"))
 
 
 swagger.enable_swagger(app, title="Swagger test API", version="0.0.2")
-

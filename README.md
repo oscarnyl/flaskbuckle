@@ -8,7 +8,7 @@ Becomes much better if you bother to use type annotations in your application!
 
 ### Quickstart
 
-1. ~~`pip install flaskbuckle`~~~ (coming soon)
+1. `pip install flaskbuckle` 
 2. Add to application configuration:
 ```python
 from flaskbuckle import swagger
@@ -62,33 +62,43 @@ Parameters:
 - `param_type` - A type variable declaring what the type of the header is, ex:
   `str`, `Optional[bool]`, `List[int]`
 
-##### `@swagger.return_model(model: SwaggerModel, status_code: int)`
+##### `@swagger.post_model(model: SwaggerModel)`
+Decorator to mark that this endpoint has a post model. The post model shall be a
+dict of `SwaggerModel`-type, and shall have the format explained in its section.
+Post models double as both schemas and examples for the endpoint.
+RESTRICTION: You may only have one post model per endpoint. This is a restriction
+imposed by the Swagger 2.0-standard.
+
+Parameters:
+- `model: SwaggerModel` - A dict of `SwaggerModel`-type.
+
+##### `@swagger.return_model(model: SwaggerModel, status_code: int, mimetype: str)`
 Decorator to mark that this endpoint has a return model. The return model shall
-be a class inheriting from `swagger.SwaggerModel`, and shall have the format
+be a dict of `SwaggerModel`-type, and shall have the format
 explained in its section. Return models double as both schemas and examples for
 the endpoint.
 
 Parameters:
-- `model: SwaggerModel` - A class extending from `SwaggerModel`. Note
-  that you should not pass an instance of a class; you should reference the
-  class directly.
+- `model: SwaggerModel` - A dict of `SwaggerModel`-type.
 - `status_code: int` - The status code that will return the declared model. ex:
   `200`
+- `mimetype: str` - The mimetype of the declared model. ex: `"application/json"`
 
-##### `class SwaggerModel`
-A class describing a return model. Classes inheriting from this class describes
-both schemas and examples for endpoints. An example:
+##### `type SwaggerModel`
+A dict describing a Swagger Model. The type definition is: `Dict[Any, Tuple[type, Any]]` where the
+key is the field name, the first tuple item is the type of the field and the second tuple item is
+an example value for this field. If the type is set to `dict`, the example field must be set to
+another `SwaggerModel`, to allow for arbitrary model definitions. An example:
 
 ```python
-from flask_swagger import SwaggerModel
+EXAMPLE_MODEL = {
+    "hello": (str, "world")
+}
 
-class ExampleModel(SwaggerModel):
-    hello: str = "world"
-
-
-class NestedExampleModel(SwaggerModel):
-    foo: int = 1
-    bar: SwaggerModel = ExampleModel
+NESTED_EXAMPLE_MODEL = {
+    "foo": (int, 1),
+    "bar": (dict, EXAMPLE_MODEL)
+}
 ```
 
 Would generate the following schemas:
@@ -162,10 +172,6 @@ utilize this field (perhaps most notable for python developers is `flex`).
 ### TODO
 Things that need to be done in this library, in order of priority.
 
-- Replace the SwaggerModel-structure for representing Schemas/Examples - it is not
-  flexible enough to provide the functionality we need. Replace with a dict-based
-  approach (`key: Any => Tuple[Type, ExampleValue]`)
-- Implement post body models
 - Add referenced models to `definitions` and reference them via `$ref` instead
   of the naive approach currently used
 - Add testing
@@ -175,5 +181,5 @@ Things that need to be done in this library, in order of priority.
 
 ### Thanks to
 Swashbuckle, which inspired this library (and its name, once I figured out my
-working title was already used)
+working title was already used).
 
