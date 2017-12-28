@@ -175,6 +175,9 @@ Parameters:
 ### TODO
 Things that need to be done in this library, in order of priority.
 
+- Fix route overwriting (if you register separate view functions for the same route with
+  different methods they will currently eat each other, leaving the last registered to
+  be the only one present in the swaggerfile)
 - Add referenced models to `definitions` and reference them via `$ref` instead
   of the naive approach currently used
 - Add testing
