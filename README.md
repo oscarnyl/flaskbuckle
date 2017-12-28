@@ -164,10 +164,13 @@ Parameters:
   swagger spec.
 
 ### Notable swagger extensions
-flaskbuckle will generate a `"x-nullable"`-key and set it to `true` for
-anything declared with the type `Optional[T]`. As this is non-standard it will
-not have any effect on SwaggerUI, but you may find that other tooling can
-utilize this field (perhaps most notable for python developers is `flex`).
+- flaskbuckle will generate a `"x-nullable"`-key and set it to `true` for
+  anything declared with the type `Optional[T]`. As this is non-standard it will
+  not have any effect on SwaggerUI, but you may find that other tooling can
+  utilize this field (perhaps most notable for python developers is `flex`).
+- flaskbuckle will encode UUID-annotations as being of type string and additionally
+  will set "format" to be "uuid" for these types. This is supported (and suggested)
+  by the Swagger 2.0-spec, but not required nor defined by the spec.
 
 ### TODO
 Things that need to be done in this library, in order of priority.
