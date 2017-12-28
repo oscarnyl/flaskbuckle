@@ -330,10 +330,12 @@ def _generate_post_model_description(post_model_description: SwaggerModel, name:
                 post_model_description
             )
         ),
+    }
+    model_description["schema"].update({
         "example": _generate_model_example(
             post_model_description
         )
-    }
+    })
     description = _generate_parameter_description(
         f"{name} post body",
         ParameterLocation.BODY,
