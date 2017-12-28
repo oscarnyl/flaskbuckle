@@ -28,6 +28,13 @@ EXAMPLE_RECURSIVE_MODEL = {
 }
 
 
+EXAMPLE_GENERIC_MODEL = {
+    "list_field": (List[dict], [
+        EXAMPLE_MODEL
+    ])
+}
+
+
 @app.route("/")
 @swagger.return_model(EXAMPLE_MODEL, 200, "application/json")
 def hello() -> FlaskReturn[dict]:
@@ -72,6 +79,7 @@ def manual_swagger_endpoint():
 
 
 @app.route("/some/route/with/<untyped_parameter>")
+@swagger.return_model(EXAMPLE_GENERIC_MODEL, 200, "application/json")
 def route_with_untyped_parameter(untyped_parameter):
     return untyped_parameter
 

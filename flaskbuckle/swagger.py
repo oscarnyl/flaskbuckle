@@ -183,13 +183,30 @@ def _generate_model_description(
     }
 
 
+def _is_dict_or_inner_dict(t) -> bool:
+    if t == dict:
+        return True
+    if isinstance(t, GenericMeta):
+        if _gorg(t) is List:
+            return t.__args__[0] == dict
+        if _gorg(t) is Dict:
+            return True
+    if isinstance(t, _Union) \
+       and len(t.__args__) == 2 \
+       and isinstance(t.__args__[1], type(None)):
+        return t.__args__[0] == dict
+
+
 def _generate_model_schema(model: SwaggerModel) -> dict:
     generated_schema = {}
     for key, value in model.items():
-        if value[0] == dict:
-            generated_schema[key] = _generate_model_schema(
-                value[1]
-            )
+        if _is_dict_or_inner_dict(value[0]):
+            if isinstance(value[0], GenericMeta) and _gorg(value[0]) is List:
+                generated_schema[key] = [_generate_model_schema(value[1][0])]
+            else:
+                generated_schema[key] = _generate_model_schema(
+                    value[1]
+                )
         else:
             generated_schema[key] = value[0]
     return generated_schema
@@ -208,10 +225,13 @@ def _generate_swagger_schema(model_mapping: dict) -> dict:
 def _generate_model_example(model: SwaggerModel) -> dict:
     generated_example = {}
     for key, value in model.items():
-        if value[0] == dict:
-            generated_example[key] = _generate_model_example(
-                value[1]
-            )
+        if _is_dict_or_inner_dict(value[0]):
+            if isinstance(value[0], GenericMeta) and _gorg(value[0]) is List:
+                generated_example[key] = [_generate_model_example(v) for v in value[1]]
+            else:
+                generated_example[key] = _generate_model_example(
+                    value[1]
+                )
         else:
             generated_example[key] = value[1]
     return generated_example
@@ -233,6 +253,12 @@ SWAGGER_TYPE_MAP = {
 
 
 def _generate_swagger_type(t) -> dict:
+    if isinstance(t, list):
+        inner_type = _generate_swagger_type(t[0])
+        return {
+            "type": "array",
+            "items": inner_type
+        }
     if isinstance(t, dict):
         return {
             "type": "object",
