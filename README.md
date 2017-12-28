@@ -175,6 +175,8 @@ Parameters:
 ### TODO
 Things that need to be done in this library, in order of priority.
 
+- Support file upload as post-model
+- Support non-json style post- and return-models
 - Add referenced models to `definitions` and reference them via `$ref` instead
   of the naive approach currently used
 - Add testing
