@@ -449,7 +449,10 @@ def _generate_swagger(
         rulestring = rule.rule.replace("<", "{").replace(">", "}")
         methods = _generate_methods(application, rule)
         cleaned_rulestring = PATH_REGEX.sub("{", rulestring)
-        paths[cleaned_rulestring] = methods
+        if paths.get(cleaned_rulestring):
+            paths[cleaned_rulestring].update(methods)
+        else:
+            paths[cleaned_rulestring] = methods
 
     keylist = list(paths.keys())
     for k in keylist:

@@ -84,4 +84,9 @@ def route_with_untyped_parameter(untyped_parameter):
     return untyped_parameter
 
 
+@app.route("/", methods=["POST"])
+def route_that_overwrites_another_route():
+    return "I'm a bad route"
+
+
 swagger.enable_swagger(app, title="Swagger test API", version="0.0.2")
