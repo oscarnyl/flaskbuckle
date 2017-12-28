@@ -294,6 +294,8 @@ def _generate_path_parameter_description(
     ).parameters[parameter].annotation
     if annotation != inspect.Parameter.empty:
         parameter_description.update(_generate_swagger_type(annotation))
+    else:
+        parameter_description.update(_generate_swagger_type(str))
     return parameter_description
 
 

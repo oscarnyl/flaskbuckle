@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="flaskbuckle",
-    version="0.1.3",
+    version="0.1.5",
     description="Auto-generated Swagger specifications for your Flask API",
     author="Oscar Nylander",
     url="https://www.github.com/oscarnyl/flaskbuckle",

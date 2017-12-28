@@ -71,4 +71,9 @@ def manual_swagger_endpoint():
     return str(swagger.get_swagger(app, "foo", "0.0.1"))
 
 
+@app.route("/some/route/with/<untyped_parameter>")
+def route_with_untyped_parameter(untyped_parameter):
+    return untyped_parameter
+
+
 swagger.enable_swagger(app, title="Swagger test API", version="0.0.2")
