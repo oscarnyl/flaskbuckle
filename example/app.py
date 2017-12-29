@@ -34,6 +34,12 @@ EXAMPLE_GENERIC_MODEL = {
     ])
 }
 
+EXAMPLE_REFERENCING_MODEL = {
+    "referenced": "EXAMPLE_MODEL"
+}
+
+swagger.register_model(app, "EXAMPLE_MODEL", EXAMPLE_MODEL, "application/json")
+
 
 @app.route("/")
 @swagger.return_model(EXAMPLE_MODEL, 200, "application/json")
@@ -66,7 +72,7 @@ def some_route() -> MultiDimensionalListReturn:
 
 
 @app.route("/post_something", methods=["POST"])
-@swagger.post_model(EXAMPLE_MODEL)
+@swagger.post_model("EXAMPLE_MODEL")
 @swagger.return_model(EXAMPLE_MODEL, 200, "application/json")
 def post_something():
     """echo, but in post format!"""
@@ -87,6 +93,19 @@ def route_with_untyped_parameter(untyped_parameter):
 @app.route("/", methods=["POST"])
 def route_that_overwrites_another_route():
     return "I'm a bad route"
+
+
+@app.route("/some/route/that/returns/nothing")
+@swagger.return_model(None, 201)
+def route_that_returns_nothing():
+    return "", 201
+
+
+@app.route("/some/route/with/registered/model")
+@swagger.post_model("EXAMPLE_MODEL")
+@swagger.return_model(EXAMPLE_REFERENCING_MODEL, 200)
+def route_with_registered_model():
+    return "", 200
 
 
 swagger.enable_swagger(app, title="Swagger test API", version="0.0.2")

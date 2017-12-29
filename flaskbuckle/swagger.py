@@ -9,12 +9,14 @@ from typing import (
     List,
     Dict,
     _Union,
-    Any
+    Union,
+    Any,
+    Optional
 )
 from uuid import UUID
 from enum import Enum
 
-from flask import Flask, render_template_string, send_file, make_response
+from flask import Flask, render_template_string, send_file, make_response, current_app
 
 
 PATH_REGEX = re.compile(r"{.*:")
@@ -114,6 +116,19 @@ def get_swagger(
     return _generate_swagger(application, title, version, route)
 
 
+SwaggerModel = Dict[Any, Tuple[type, Any]]
+
+
+def register_model(application: Flask, name: str, model: SwaggerModel, mimetype: str) -> None:
+    model_registry = application.config.get("FLASKBUCKLE_MODELS")
+    if not model_registry:
+        model_registry = {}
+    if model_registry.get(name):
+        return
+    model_registry[name] = (model, mimetype)
+    application.config["FLASKBUCKLE_MODELS"] = model_registry
+
+
 def header(name: str, header_type=str) -> Callable:
     def header_decorator(f: Callable) -> Callable:
         header_metadata = {}
@@ -140,23 +155,23 @@ def query_param(name: str, param_type=str) -> Callable:
     return query_param_decorator
 
 
-SwaggerModel = Dict[Any, Tuple[type, Any]]
-
-
-def return_model(model: SwaggerModel, status_code: int, mimetype: str) -> Callable:
+def return_model(model: Union[SwaggerModel, str], status_code: int, mimetype: Optional[str]=None) -> Callable:
     def return_model_decorator(f: Callable) -> Callable:
         return_model_metadata = {}
         if hasattr(f, "__SWAGGER_RETURN_MODELS"):
             if status_code in f.__SWAGGER_RETURN_MODELS:
                 return f
             return_model_metadata.update(f.__SWAGGER_RETURN_MODELS)
-        return_model_metadata[status_code] = (model, mimetype)
+        if isinstance(model, dict):
+            return_model_metadata[status_code] = (model, mimetype)
+        elif isinstance(model, str):
+            return_model_metadata[status_code] = model
         f.__SWAGGER_RETURN_MODELS = return_model_metadata
         return f
     return return_model_decorator
 
 
-def post_model(model: SwaggerModel) -> Callable:
+def post_model(model: Union[SwaggerModel, str]) -> Callable:
     def post_model_decorator(f: Callable) -> Callable:
         if hasattr(f, "__SWAGGER_POST_MODEL"):
             raise SwaggerException("Multiple post models is not supported")
@@ -166,21 +181,38 @@ def post_model(model: SwaggerModel) -> Callable:
 
 
 def _generate_model_description(
-    model_description: Tuple[SwaggerModel, str],
+    model_description: Union[Tuple[SwaggerModel, str], str, None],
     status_code: int,
     f: Callable
 ) -> str:
-    model, mimetype = model_description
     description = f"{f.__name__}: {status_code}"
-    return {
-        "description": description,
-        "examples": {
-            mimetype: _generate_model_example(model)
-        },
-        "schema": _generate_swagger_schema(
-            _generate_model_schema(model)
-        )
+    ret = {
+        "description": description
     }
+
+    if model_description and isinstance(model_description, tuple) and not isinstance(model_description, str):
+        model, mimetype = model_description
+        ret.update({
+            "schema": _generate_swagger_schema(
+                _generate_model_schema(model)
+            ),
+            "examples": {
+                mimetype: _generate_model_example(model)
+            }
+        })
+    if model_description and isinstance(model_description, str):
+        if not current_app.config.get("FLASKBUCKLE_MODELS"):
+            raise SwaggerException("Found no registered models")
+        model_ref = current_app.config["FLASKBUCKLE_MODELS"].get(model_description)
+        if not model_ref:
+            raise SwaggerException(f"Found no registered model by name: {model_description}")
+        reference = f"#/definitions/{model_description}"
+        ret.update({
+            "schema": {
+                "$ref": reference
+            }
+        })
+    return ret
 
 
 def _is_dict_or_inner_dict(t) -> bool:
@@ -207,6 +239,8 @@ def _generate_model_schema(model: SwaggerModel) -> dict:
                 generated_schema[key] = _generate_model_schema(
                     value[1]
                 )
+        elif not isinstance(value, tuple) and isinstance(value, str):
+            generated_schema[key] = value
         else:
             generated_schema[key] = value[0]
     return generated_schema
@@ -216,8 +250,7 @@ def _generate_swagger_schema(model_mapping: dict) -> dict:
     return {
         "type": "object",
         "properties": {
-            key: _generate_swagger_type(value)
-            for key, value in model_mapping.items()
+            key: _generate_swagger_type(value) if not isinstance(value, str) else {"$ref": "#/definitions/{}".format(value)} for key, value in model_mapping.items()
         }
     }
 
@@ -351,19 +384,28 @@ def _generate_query_parameter_description(query_name, query_type) -> dict:
     return description
 
 
-def _generate_post_model_description(post_model_description: SwaggerModel, name: str) -> dict:
-    model_description = {
-        "schema": _generate_swagger_schema(
-            _generate_model_schema(
+def _generate_post_model_description(post_model_description: Union[SwaggerModel, str], name: str) -> dict:
+    if isinstance(post_model_description, dict):
+        model_description = {
+            "schema": _generate_swagger_schema(
+                _generate_model_schema(
+                    post_model_description
+                )
+            ),
+        }
+        model_description["schema"].update({
+            "example": _generate_model_example(
                 post_model_description
             )
-        ),
-    }
-    model_description["schema"].update({
-        "example": _generate_model_example(
-            post_model_description
-        )
-    })
+        })
+    elif isinstance(post_model_description, str):
+        reference = f"#/definitions/{post_model_description}"
+        model_description = {
+            "schema": {
+                "$ref": reference
+            }
+        }
+
     description = _generate_parameter_description(
         f"{name} post body",
         ParameterLocation.BODY,
@@ -444,6 +486,12 @@ def _generate_swagger(
     version: str,
     route: str
 ) -> dict:
+    definitions = {}
+    if application.config.get("FLASKBUCKLE_MODELS"):
+        for name, model in application.config["FLASKBUCKLE_MODELS"].items():
+            model_schema = _generate_swagger_schema(_generate_model_schema(model[0]))
+            model_schema.update({"example": _generate_model_example(model[0])})
+            definitions[name] = model_schema
     paths = {}
     for rule in application.url_map.iter_rules():
         rulestring = rule.rule.replace("<", "{").replace(">", "}")
@@ -461,6 +509,7 @@ def _generate_swagger(
     return {
         "swagger": "2.0",
         "paths": paths,
+        "definitions": definitions,
         "info": {
             "title": title,
             "version": version
